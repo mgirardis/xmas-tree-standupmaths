@@ -17,13 +17,39 @@ def main():
     ax.scatter(r[:,0],r[:,1],r[:,2],marker='o')
     plt.show()
 
+    # setting animation parameters
     anim_dt = 0.01 # animation interval in seconds
 
-    return
+    # setting external stimulus parameters
+    r_Poisson = 0.01 # rate of Poisson process
+    P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
+
+    # setting neuron parameters
+    parNeuron_tanh = [ 0.6, 0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
+    neuron_map_iter = neuron_map_tanh
+    parNeuron = parNeuron_tanh
+
+    # setting synapse parameters
+    parSynapse = [-0.2,0.0,2.0,2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
+    R_connection = 0.0 # if 0, generates a cubic lattice; if > 0, then connects all pixels that are within radius R of each other
+
+    global V,S
+    V,S,input_list,presyn_neuron_list = build_network(r,R=R_connection)
+    V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh)
+
+    L = [20,25]
     fh = plt.figure(1)
-    pdata = plt.imshow(img[0])
-    ani = animation.FuncAnimation(fh, animate, len(img), fargs=(img,plt,L), interval=int(anim_dt*1000), blit=True)
+    pdata = plt.imshow(((V[:,0]+1.0)/2.0).reshape(L))
+    ani = animation.FuncAnimation(fh, animate, fargs=(plt,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True)
     plt.show()
+
+def set_initial_condition(V,neuron_map_iter,parNeuron):
+    V0 = get_neuron_resting_state(neuron_map_iter,parNeuron)
+    i = 0
+    while i < V.shape[0]:
+        V[i,:] = V0.copy()
+        i+=1
+    return V
 
 def build_network(r,R=0.0):
 # r vector of coordinates of each pixel
@@ -83,6 +109,14 @@ def synapse_map(i,S,par,Vpre):
     S[i,0] = (1.0 - par[2]) * S[i,0] + S[i,1]
     S[i,1] = (1.0 - par[3]) * S[i,1] + thetaJ
     return S
+
+def get_neuron_resting_state(neuron_map_iter,par,T=20000):
+    V = numpy.zeros((1,3))
+    t = 0
+    while t<T:
+        V = neuron_map_iter(0,V,par,[],0.0)
+        t+=1
+    return V
 
 def logistic_func(u):
     return u / (1 + (u if u > 0.0 else -u)) # u/(1+|u|)
@@ -168,8 +202,10 @@ def generate_list_of_neighbors(r,R=0.0):
             neigh.append(pixel_list_sorted[local_neigh_list]) # adds neighbors
     return neigh
 
-def animate(t,img,plt,L):
-    pdata = plt.imshow(img[t])
+def animate(t,plt,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
+    global V,S
+    V,S = network_time_step(neuron_map_iter,V,parNeuron,input_list,S,presyn_neuron_list,parSyn,P_poisson)
+    pdata = plt.imshow(((V[:,0]+1.0)/2.0).reshape(L))
     ax = plt.gca()
     ax.set_xticks(numpy.arange(L[1]))
     ax.set_yticks(numpy.arange(L[0]))
