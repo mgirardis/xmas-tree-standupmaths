@@ -1,117 +1,111 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import re
 import os
 import argparse
 import numpy
 import matplotlib.pyplot as plt
-plt.rcParams['animation.ffmpeg_path'] = 'D:\\Dropbox\\p\\programas\\bin\\ffmpeg\\bin\\ffmpeg.exe'
+#print(plt.rcParams['animation.ffmpeg_path']) # if it does not recognize the ffmpeg, force it to look in the right place
+#plt.rcParams['animation.ffmpeg_path'] = 'D:\\Dropbox\\p\\programas\\bin\\ffmpeg\\bin\\ffmpeg.exe'
 import matplotlib.animation as animation
+from numpy.core.fromnumeric import mean
 
 def main():
 
-    #global r_LEDs
+    parser = argparse.ArgumentParser(description='Simulates xmas tree with LED coordinates from standupmaths channel:\n\n       https://youtu.be/TvlpIojusBE')
+    parser.add_argument('-save', nargs=1, required=False, metavar='NUM_OF_FRAMES', type=int, default=[0], help='if 0, doesnt save video; otherwise saves the amount of frames given by this parameter')
+    parser.add_argument('-dt', nargs=1, required=False, metavar='SECONDS', type=float, default=[0.04], help='(seconds) animation interval')
+    parser.add_argument('-R', nargs=1, required=False, metavar='RADIUS', type=float, default=[0.0], help='if > 0, connects every led within R distant from one another; otherwise generates a cubic-like lattice')
+    parser.add_argument('-cmap', nargs=1, required=False, metavar='NAME', type=str, default=['viridis'], help='name of the colormap to use -- only the predefined by matplotlib are accepted')
+    parser.add_argument('-set', nargs=1, required=False, metavar='CHOICE',type=str,default=['spiral'], choices=['spiral', 'sync', 'linear'], help='spiral: generates spiral waves; sync: generates synchronized flashes; linear: generates linear wave fronts')
+    args = parser.parse_args()
+
+    # loading the positions of each LED
     r_LEDs = numpy.asarray(load_coords(),dtype=float)
 
-    # just visualizing the tree
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111,projection='3d')
-    #ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],marker='o')
-    #plt.show()
+    # setting simulation params
+    anim_dt = args.dt[0] # animation interval in seconds
+    color_map = plt.get_cmap(args.cmap[0])
+    save_video = args.save[0]
+    sim_setting = args.set[0]
+    R_connection = args.R[0] # if 0, generates a cubic lattice; if > 0, then connects all pixels that are within radius R of each other
 
-    # setting animation parameters
-    color_arr_10 = numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
-                                  [0.281412, 0.155834, 0.469201, 1.      ],
-                                  [0.244972, 0.287675, 0.53726 , 1.      ],
-                                  [0.190631, 0.407061, 0.556089, 1.      ],
-                                  [0.147607, 0.511733, 0.557049, 1.      ],
-                                  [0.119699, 0.61849 , 0.536347, 1.      ],
-                                  [0.20803 , 0.718701, 0.472873, 1.      ],
-                                  [0.430983, 0.808473, 0.346476, 1.      ],
-                                  [0.709898, 0.868751, 0.169257, 1.      ],
-                                  [0.993248, 0.906157, 0.143936, 1.      ]])
+    print('chosen settings: %s'%sim_setting)
 
-    color_arr_15 = numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
-                                  [0.28291 , 0.105393, 0.426902, 1.      ],
-                                  [0.275191, 0.194905, 0.496005, 1.      ],
-                                  [0.248629, 0.278775, 0.534556, 1.      ],
-                                  [0.212395, 0.359683, 0.55171 , 1.      ],
-                                  [0.180629, 0.429975, 0.557282, 1.      ],
-                                  [0.153364, 0.497   , 0.557724, 1.      ],
-                                  [0.127568, 0.566949, 0.550556, 1.      ],
-                                  [0.122312, 0.633153, 0.530398, 1.      ],
-                                  [0.175707, 0.6979  , 0.491033, 1.      ],
-                                  [0.288921, 0.758394, 0.428426, 1.      ],
-                                  [0.449368, 0.813768, 0.335384, 1.      ],
-                                  [0.626579, 0.854645, 0.223353, 1.      ],
-                                  [0.814576, 0.883393, 0.110347, 1.      ],
-                                  [0.993248, 0.906157, 0.143936, 1.      ]])
-
-    color_arr_20 = numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
-                                  [0.280894, 0.078907, 0.402329, 1.      ],
-                                  [0.28229 , 0.145912, 0.46151 , 1.      ],
-                                  [0.270595, 0.214069, 0.507052, 1.      ],
-                                  [0.250425, 0.27429 , 0.533103, 1.      ],
-                                  [0.223925, 0.334994, 0.548053, 1.      ],
-                                  [0.19943 , 0.387607, 0.554642, 1.      ],
-                                  [0.175841, 0.44129 , 0.557685, 1.      ],
-                                  [0.15627 , 0.489624, 0.557936, 1.      ],
-                                  [0.136408, 0.541173, 0.554483, 1.      ],
-                                  [0.121831, 0.589055, 0.545623, 1.      ],
-                                  [0.12478 , 0.640461, 0.527068, 1.      ],
-                                  [0.162016, 0.687316, 0.499129, 1.      ],
-                                  [0.239374, 0.735588, 0.455688, 1.      ],
-                                  [0.335885, 0.777018, 0.402049, 1.      ],
-                                  [0.458674, 0.816363, 0.329727, 1.      ],
-                                  [0.585678, 0.846661, 0.249897, 1.      ],
-                                  [0.730889, 0.871916, 0.156029, 1.      ],
-                                  [0.866013, 0.889868, 0.095953, 1.      ],
-                                  [0.993248, 0.906157, 0.143936, 1.      ]])
-    #global color_arr
-    anim_dt = 0.02 # animation interval in seconds
-    color_arr = color_arr_15
-    color_map = plt.get_cmap('viridis')
-
-    # setting external stimulus parameters
-    r_Poisson = 0.2 # rate of Poisson process
-    P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
-
-    # setting neuron parameters
-    parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
-    neuron_map_iter = neuron_map_tanh
-    parNeuron = parNeuron_tanh
-
-    # setting synapse parameters
-    parSynapse = [-0.2,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
-    R_connection = 0.0 # if 0, generates a cubic lattice; if > 0, then connects all pixels that are within radius R of each other
+    if sim_setting == 'spiral':
+        # setting external stimulus parameters
+        r_Poisson = 0.2 # rate of Poisson process
+        # setting neuron parameters
+        parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
+        neuron_map_iter = neuron_map_tanh
+        parNeuron = parNeuron_tanh
+        V0 = None # uses default initial condition
+        # setting synapse parameters
+        parSynapse = [-0.2,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
+    elif sim_setting == 'sync':
+        # setting external stimulus parameters
+        r_Poisson = 0.0 # rate of Poisson process
+        # setting neuron parameters
+        parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.001, -0.5, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
+        neuron_map_iter = neuron_map_tanh
+        parNeuron = parNeuron_tanh
+        V0 = 'random'
+        # setting synapse parameters
+        parSynapse = [-0.2,0.05,1.0/5.0,1.0/5.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
+        R_connection = mean_distance(r_LEDs)/6.0
+    elif sim_setting == 'linear':
+        pass
 
     global V,S
+    P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
     V,S,input_list,presyn_neuron_list = build_network(r_LEDs,R=R_connection)
-    V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh)
+    V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh,V0)
 
     fh = plt.figure(1)
     ax = fh.add_subplot(111,projection='3d')
+    ax = fix_aspect(ax,r_LEDs)
     splot = ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],c=memb_potential_to_01(V),vmin=0,vmax=1,cmap=color_map)
-    ani = animation.FuncAnimation(fh, animate, fargs=(splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True, repeat=True, save_count=100)
+    ani = animation.FuncAnimation(fh, animate, fargs=(splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True, repeat=True, save_count=save_video)
     plt.show()
-    ani.save('xmas_tree_sim.mp4',fps=15)
-    #L = [20,25]
-    #fh = plt.figure(1)
-    #pdata = plt.imshow(((V[:,0]+1.0)/2.0).reshape(L),vmin=0.0,vmax=1.0)
-    #ani = animation.FuncAnimation(fh, animate, fargs=(plt,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True)
-    #plt.show()
+    if save_video > 0:
+        fileName = 'xmas_tree_sim'
+        try:
+            print('... saving video: %s'%(fileName+'.mp4'))
+            ani.save(fileName+'.mp4',fps=20)
+        except:
+            print('... saving video: %s'%(fileName+'.gif'))
+            ani.save(fileName+'.gif',fps=15)
+
 
 def memb_potential_to_01(V):
     # V -> dynamic variable
-    return ((V[:,0]+1.0)/2.0)**4
+    return ((V[:,0]+1.0)*0.5)**4 # raising to 4 is just to emphasize bright colors
 
 def memb_potential_to_coloridx(V,n_colors):
     # V -> dynamic variable
     # n_colors -> total number of colors
     return numpy.floor(n_colors*memb_potential_to_01(V)).astype(int)
 
-def set_initial_condition(V,neuron_map_iter,parNeuron):
-    V0 = get_neuron_resting_state(neuron_map_iter,parNeuron)
+def set_initial_condition(V,neuron_map_iter,parNeuron,V0_type=None):
+    if type(V0_type) is type(None):
+        V0 = get_neuron_resting_state(neuron_map_iter,parNeuron)
+    else:
+        if type(V0_type) is str:
+            if V0_type == 'rest':
+                V0 = get_neuron_resting_state(neuron_map_iter,parNeuron)
+            elif V0_type == 'random':
+                V = 2.0*numpy.random.random_sample(V.shape)-1.0
+                return V
+            else:
+                raise ValueError('V0_type must be either an array or list with 3 elements or one of the following: rest, random')
+        elif type(V0_type) is list:
+            V0 = numpy.asarray(V0_type)
+        else:
+            if type(V0_type) is numpy.ndarray:
+                V0 = V0_type
+            else:
+                raise ValueError('V0_type must be either an array or list with 3 elements or one of the following: rest, random')
     i = 0
     while i < V.shape[0]:
         V[i,:] = V0.copy()
@@ -217,7 +211,7 @@ def mean_distance(p):
         i += 1
     return dsum / float(N)
 
-def generate_list_of_neighbors(r,R=0.0):
+def generate_list_of_neighbors(r,R=0.0,on_conic_surface_only=False):
     # generates a network of "pixels"
     # each pixel in position r[i,:] identifies its 6 closest neighbors and should receive a connection from it
     # if R is given, includes all pixels within a radius R of r[i,:] as a neighbor
@@ -225,6 +219,7 @@ def generate_list_of_neighbors(r,R=0.0):
     #
     # r -> position vector (each line is the position of each pixel)
     # R -> neighborhood ball around each pixel
+    # on_conic_surface_only -> if true, only links pixels that are on the conic shell of the tree
     #
     # returns:
     #    list of neighbors
@@ -239,12 +234,20 @@ def generate_list_of_neighbors(r,R=0.0):
             if not (v[i] in l):
                 return v[i]
             i+=1
-    #get_existing_neigh = lambda n: [ m for m in n if not (m is None) ] # another auxiliary function
+    if on_conic_surface_only:
+        # cone equation (x**2 + y**2)/c**2 = (z-z0)**2
+        z0 = numpy.max(r[:,3]) # cone height above the z=0 plane
+        h = z0 + numpy.abs(numpy.min(r[:,3])) # cone total height
+        base_r = (numpy.max(  (numpy.max(r[:,2]),numpy.max(r[:,1]))   ) + numpy.abs(numpy.min(  ( numpy.min(r[:,2]),numpy.min(r[:,1]) )  )))/2.0 # cone base radius
+        c = base_r / h # cone opening radius (defined by wolfram https://mathworld.wolfram.com/Cone.html )
+        z_cone = lambda x,y,z0,c,s: z0+s*numpy.sqrt((x**2+y**2)/(c**2)) # s is the concavity of the cone: -1 turned down, +1 turned up
+        pass
     neigh = []
     for r0 in r:
         if (R>0.0): # a neighborhood radius is given
             neigh.append(numpy.nonzero(numpy.linalg.norm(r-r0,axis=1)<R)[0])
-        else: # a radius is not given, hence returns a crystalline-like cubic-like structure :P
+        else:
+            # a radius is not given, hence returns a crystalline-like cubic-like structure :P
             pixel_list_sorted = numpy.argsort(numpy.linalg.norm(r-r0,axis=1)) # sorted by Euler distance to r0
             rs = r[pixel_list_sorted,:] # list of positions from the closest to the farthest one to r0
             local_neigh_list = [] # local neighbor list
@@ -269,10 +272,43 @@ def generate_list_of_neighbors(r,R=0.0):
             neigh.append(pixel_list_sorted[local_neigh_list]) # adds neighbors
     return neigh
 
+def get_color_matrix():
+    return numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
+                          [0.280894, 0.078907, 0.402329, 1.      ],
+                          [0.28229 , 0.145912, 0.46151 , 1.      ],
+                          [0.270595, 0.214069, 0.507052, 1.      ],
+                          [0.250425, 0.27429 , 0.533103, 1.      ],
+                          [0.223925, 0.334994, 0.548053, 1.      ],
+                          [0.19943 , 0.387607, 0.554642, 1.      ],
+                          [0.175841, 0.44129 , 0.557685, 1.      ],
+                          [0.15627 , 0.489624, 0.557936, 1.      ],
+                          [0.136408, 0.541173, 0.554483, 1.      ],
+                          [0.121831, 0.589055, 0.545623, 1.      ],
+                          [0.12478 , 0.640461, 0.527068, 1.      ],
+                          [0.162016, 0.687316, 0.499129, 1.      ],
+                          [0.239374, 0.735588, 0.455688, 1.      ],
+                          [0.335885, 0.777018, 0.402049, 1.      ],
+                          [0.458674, 0.816363, 0.329727, 1.      ],
+                          [0.585678, 0.846661, 0.249897, 1.      ],
+                          [0.730889, 0.871916, 0.156029, 1.      ],
+                          [0.866013, 0.889868, 0.095953, 1.      ],
+                          [0.993248, 0.906157, 0.143936, 1.      ]])
+
+def fix_aspect(ax,r):
+    max_range = numpy.array([r[:,0].max()-r[:,0].min(), r[:,1].max()-r[:,1].min(), r[:,2].max()-r[:,2].min()]).max() / 2.0
+    mid_x = (r[:,0].max()+r[:,0].min()) * 0.5
+    mid_y = (r[:,1].max()+r[:,1].min()) * 0.5
+    mid_z = (r[:,2].max()+r[:,2].min()) * 0.5
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+    return ax
+
 #def animate(t,ax,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
 def animate(t,splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
     global V,S
     V,S = network_time_step(neuron_map_iter,V,parNeuron,input_list,S,presyn_neuron_list,parSyn,P_poisson)
+    #print(V[1,:])
     splot.set_array(memb_potential_to_01(V))
     return splot,
 
