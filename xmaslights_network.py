@@ -5,43 +5,110 @@ import os
 import argparse
 import numpy
 import matplotlib.pyplot as plt
+plt.rcParams['animation.ffmpeg_path'] = 'D:\\Dropbox\\p\\programas\\bin\\ffmpeg\\bin\\ffmpeg.exe'
 import matplotlib.animation as animation
 
 def main():
 
-    r = numpy.asarray(load_coords(),dtype=float)
+    #global r_LEDs
+    r_LEDs = numpy.asarray(load_coords(),dtype=float)
 
     # just visualizing the tree
-    fig = plt.figure()
-    ax = fig.add_subplot(111,projection='3d')
-    ax.scatter(r[:,0],r[:,1],r[:,2],marker='o')
-    plt.show()
+    #fig = plt.figure()
+    #ax = fig.add_subplot(111,projection='3d')
+    #ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],marker='o')
+    #plt.show()
 
     # setting animation parameters
-    anim_dt = 0.01 # animation interval in seconds
+    color_arr_10 = numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
+                                  [0.281412, 0.155834, 0.469201, 1.      ],
+                                  [0.244972, 0.287675, 0.53726 , 1.      ],
+                                  [0.190631, 0.407061, 0.556089, 1.      ],
+                                  [0.147607, 0.511733, 0.557049, 1.      ],
+                                  [0.119699, 0.61849 , 0.536347, 1.      ],
+                                  [0.20803 , 0.718701, 0.472873, 1.      ],
+                                  [0.430983, 0.808473, 0.346476, 1.      ],
+                                  [0.709898, 0.868751, 0.169257, 1.      ],
+                                  [0.993248, 0.906157, 0.143936, 1.      ]])
+
+    color_arr_15 = numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
+                                  [0.28291 , 0.105393, 0.426902, 1.      ],
+                                  [0.275191, 0.194905, 0.496005, 1.      ],
+                                  [0.248629, 0.278775, 0.534556, 1.      ],
+                                  [0.212395, 0.359683, 0.55171 , 1.      ],
+                                  [0.180629, 0.429975, 0.557282, 1.      ],
+                                  [0.153364, 0.497   , 0.557724, 1.      ],
+                                  [0.127568, 0.566949, 0.550556, 1.      ],
+                                  [0.122312, 0.633153, 0.530398, 1.      ],
+                                  [0.175707, 0.6979  , 0.491033, 1.      ],
+                                  [0.288921, 0.758394, 0.428426, 1.      ],
+                                  [0.449368, 0.813768, 0.335384, 1.      ],
+                                  [0.626579, 0.854645, 0.223353, 1.      ],
+                                  [0.814576, 0.883393, 0.110347, 1.      ],
+                                  [0.993248, 0.906157, 0.143936, 1.      ]])
+
+    color_arr_20 = numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
+                                  [0.280894, 0.078907, 0.402329, 1.      ],
+                                  [0.28229 , 0.145912, 0.46151 , 1.      ],
+                                  [0.270595, 0.214069, 0.507052, 1.      ],
+                                  [0.250425, 0.27429 , 0.533103, 1.      ],
+                                  [0.223925, 0.334994, 0.548053, 1.      ],
+                                  [0.19943 , 0.387607, 0.554642, 1.      ],
+                                  [0.175841, 0.44129 , 0.557685, 1.      ],
+                                  [0.15627 , 0.489624, 0.557936, 1.      ],
+                                  [0.136408, 0.541173, 0.554483, 1.      ],
+                                  [0.121831, 0.589055, 0.545623, 1.      ],
+                                  [0.12478 , 0.640461, 0.527068, 1.      ],
+                                  [0.162016, 0.687316, 0.499129, 1.      ],
+                                  [0.239374, 0.735588, 0.455688, 1.      ],
+                                  [0.335885, 0.777018, 0.402049, 1.      ],
+                                  [0.458674, 0.816363, 0.329727, 1.      ],
+                                  [0.585678, 0.846661, 0.249897, 1.      ],
+                                  [0.730889, 0.871916, 0.156029, 1.      ],
+                                  [0.866013, 0.889868, 0.095953, 1.      ],
+                                  [0.993248, 0.906157, 0.143936, 1.      ]])
+    #global color_arr
+    anim_dt = 0.02 # animation interval in seconds
+    color_arr = color_arr_15
+    color_map = plt.get_cmap('viridis')
 
     # setting external stimulus parameters
-    r_Poisson = 0.01 # rate of Poisson process
+    r_Poisson = 0.2 # rate of Poisson process
     P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
 
     # setting neuron parameters
-    parNeuron_tanh = [ 0.6, 0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
+    parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
     neuron_map_iter = neuron_map_tanh
     parNeuron = parNeuron_tanh
 
     # setting synapse parameters
-    parSynapse = [-0.2,0.0,2.0,2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
+    parSynapse = [-0.2,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
     R_connection = 0.0 # if 0, generates a cubic lattice; if > 0, then connects all pixels that are within radius R of each other
 
     global V,S
-    V,S,input_list,presyn_neuron_list = build_network(r,R=R_connection)
+    V,S,input_list,presyn_neuron_list = build_network(r_LEDs,R=R_connection)
     V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh)
 
-    L = [20,25]
     fh = plt.figure(1)
-    pdata = plt.imshow(((V[:,0]+1.0)/2.0).reshape(L))
-    ani = animation.FuncAnimation(fh, animate, fargs=(plt,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True)
+    ax = fh.add_subplot(111,projection='3d')
+    splot = ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],c=memb_potential_to_01(V),vmin=0,vmax=1,cmap=color_map)
+    ani = animation.FuncAnimation(fh, animate, fargs=(splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True, repeat=True, save_count=100)
     plt.show()
+    ani.save('xmas_tree_sim.mp4',fps=15)
+    #L = [20,25]
+    #fh = plt.figure(1)
+    #pdata = plt.imshow(((V[:,0]+1.0)/2.0).reshape(L),vmin=0.0,vmax=1.0)
+    #ani = animation.FuncAnimation(fh, animate, fargs=(plt,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True)
+    #plt.show()
+
+def memb_potential_to_01(V):
+    # V -> dynamic variable
+    return ((V[:,0]+1.0)/2.0)**4
+
+def memb_potential_to_coloridx(V,n_colors):
+    # V -> dynamic variable
+    # n_colors -> total number of colors
+    return numpy.floor(n_colors*memb_potential_to_01(V)).astype(int)
 
 def set_initial_condition(V,neuron_map_iter,parNeuron):
     V0 = get_neuron_resting_state(neuron_map_iter,parNeuron)
@@ -51,11 +118,11 @@ def set_initial_condition(V,neuron_map_iter,parNeuron):
         i+=1
     return V
 
-def build_network(r,R=0.0):
-# r vector of coordinates of each pixel
+def build_network(r_nodes,R=0.0):
+# r_nodes vector of coordinates of each pixel
 # R connection radius
     # if R is zero, generates an attempt of a cubic-like lattice, otherwise connects all pixels within a radius R of each other
-    neigh = generate_list_of_neighbors(r,R)
+    neigh = generate_list_of_neighbors(r_nodes,R)
     # creates the interaction lists between dynamic variables
     input_list,presyn_neuron_list = create_input_lists(neigh)
     # creates dynamic variables
@@ -111,7 +178,7 @@ def synapse_map(i,S,par,Vpre):
     return S
 
 def get_neuron_resting_state(neuron_map_iter,par,T=20000):
-    V = numpy.zeros((1,3))
+    V = -0.9*numpy.ones((1,3))
     t = 0
     while t<T:
         V = neuron_map_iter(0,V,par,[],0.0)
@@ -136,8 +203,8 @@ def neuron_map_tanh(i,V,par,S,Iext):
     V[i,2] = (1.0 - par[2]) * V[i,2] - par[3] * (Vprev - par[4])
     return V
 
-def mean_distance(r):
-    n = r.shape[0]
+def mean_distance(p):
+    n = p.shape[0]
     dsum = 0.0
     N = 0
     i = 0
@@ -145,7 +212,7 @@ def mean_distance(r):
         j = i+1
         while j < n:
             N += 1
-            dsum += numpy.linalg.norm(r[i,:]-r[j,:])
+            dsum += numpy.linalg.norm(p[i,:]-p[j,:])
             j += 1
         i += 1
     return dsum / float(N)
@@ -202,16 +269,12 @@ def generate_list_of_neighbors(r,R=0.0):
             neigh.append(pixel_list_sorted[local_neigh_list]) # adds neighbors
     return neigh
 
-def animate(t,plt,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
+#def animate(t,ax,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
+def animate(t,splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
     global V,S
     V,S = network_time_step(neuron_map_iter,V,parNeuron,input_list,S,presyn_neuron_list,parSyn,P_poisson)
-    pdata = plt.imshow(((V[:,0]+1.0)/2.0).reshape(L))
-    ax = plt.gca()
-    ax.set_xticks(numpy.arange(L[1]))
-    ax.set_yticks(numpy.arange(L[0]))
-    #print('t = %d'%t)
-    #print(img[t])
-    return pdata,
+    splot.set_array(memb_potential_to_01(V))
+    return splot,
 
 
 def load_coords(coordfilename = "xmastree2020/coords.txt"):
