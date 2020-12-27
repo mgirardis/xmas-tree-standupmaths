@@ -25,12 +25,19 @@ c = r/h;
 [x_grid,y_grid] = meshgrid(linspace(-r,r,100),linspace(-r,r,100));
 
 z_cone = @(x,y,z0,c,s) z0+s.*sqrt((x.^2+y.^2)./(c.^2)); % s is the concavity of the cone: -1 turned down, +1 turned up
+cone_r_sqr = @(z,z0,c) (c.*(z-z0)).^2;
 
 hold on
 spl = surf(x_grid,y_grid,z_cone(x_grid,y_grid,z0,c,-1));
 % spl = surf(x_grid,y_grid,z_cone(x_grid,y_grid,z0+50,c+0.1,-1));
 spl.EdgeColor = 'none';
 spl.FaceAlpha=0.3;
+axis square
+daspect([1,1,1]);
+grid on
+
+outside_cone = (r_LEDs(:,1).^2+r_LEDs(:,2).^2) > cone_r_sqr(r_LEDs(:,3),z0,c);
+plot3(r_LEDs(outside_cone,1),r_LEDs(outside_cone,2),r_LEDs(outside_cone,3),'o','MarkerFaceColor','k')
 axis square
 daspect([1,1,1]);
 grid on

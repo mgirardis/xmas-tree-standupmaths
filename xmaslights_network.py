@@ -18,7 +18,7 @@ def main():
     parser.add_argument('-dt', nargs=1, required=False, metavar='SECONDS', type=float, default=[0.04], help='(seconds) animation interval')
     parser.add_argument('-R', nargs=1, required=False, metavar='RADIUS', type=float, default=[0.0], help='if > 0, connects every led within R distant from one another; otherwise generates a cubic-like lattice')
     parser.add_argument('-cmap', nargs=1, required=False, metavar='NAME', type=str, default=['viridis'], help='name of the colormap to use -- only the predefined by matplotlib are accepted')
-    parser.add_argument('-set', nargs=1, required=False, metavar='CHOICE',type=str,default=['spiral'], choices=['spiral', 'sync', 'linear'], help='spiral: generates spiral waves; sync: generates synchronized flashes; linear: generates linear wave fronts')
+    parser.add_argument('-set', nargs=1, required=False, metavar='CHOICE',type=str,default=['spiral'], choices=['spiral', 'sync'], help='spiral: generates spiral waves; sync: generates synchronized flashes')
     args = parser.parse_args()
 
     # loading the positions of each LED
@@ -35,14 +35,16 @@ def main():
 
     if sim_setting == 'spiral':
         # setting external stimulus parameters
-        r_Poisson = 0.2 # rate of Poisson process
+        r_Poisson = 0.01 # rate of Poisson process
         # setting neuron parameters
         parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
         neuron_map_iter = neuron_map_tanh
         parNeuron = parNeuron_tanh
         V0 = None # uses default initial condition
         # setting synapse parameters
+        #parSynapse = [-0.8,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
         parSynapse = [-0.2,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
+        conic_surface_only = False
     elif sim_setting == 'sync':
         # setting external stimulus parameters
         r_Poisson = 0.0 # rate of Poisson process
@@ -50,16 +52,20 @@ def main():
         parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.001, -0.5, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
         neuron_map_iter = neuron_map_tanh
         parNeuron = parNeuron_tanh
-        V0 = 'random'
+        V0 = 'rest'
         # setting synapse parameters
+        #parSynapse = [0.01,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
         parSynapse = [-0.2,0.05,1.0/5.0,1.0/5.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
-        R_connection = mean_distance(r_LEDs)/6.0
-    elif sim_setting == 'linear':
-        pass
+        conic_surface_only = False
+        #R_connection = mean_distance(r_LEDs)/6.0
+        conic_surface_only = True
+    else:
+        raise ValueError('unknown setting')
+    
 
     global V,S
     P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
-    V,S,input_list,presyn_neuron_list = build_network(r_LEDs,R=R_connection)
+    V,S,input_list,presyn_neuron_list = build_network(r_LEDs,R=R_connection,conic_surface_only=conic_surface_only)
     V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh,V0)
 
     fh = plt.figure(1)
@@ -112,11 +118,11 @@ def set_initial_condition(V,neuron_map_iter,parNeuron,V0_type=None):
         i+=1
     return V
 
-def build_network(r_nodes,R=0.0):
+def build_network(r_nodes,R=0.0,conic_surface_only=False):
 # r_nodes vector of coordinates of each pixel
 # R connection radius
     # if R is zero, generates an attempt of a cubic-like lattice, otherwise connects all pixels within a radius R of each other
-    neigh = generate_list_of_neighbors(r_nodes,R)
+    neigh = generate_list_of_neighbors(r_nodes,R,on_conic_surface_only=conic_surface_only)
     # creates the interaction lists between dynamic variables
     input_list,presyn_neuron_list = create_input_lists(neigh)
     # creates dynamic variables
@@ -235,13 +241,39 @@ def generate_list_of_neighbors(r,R=0.0,on_conic_surface_only=False):
                 return v[i]
             i+=1
     if on_conic_surface_only:
+        # only adds 4 neighbors (top, bottom, left, right) that are outside of the cone defined by the estimated tree cone parameters
         # cone equation (x**2 + y**2)/c**2 = (z-z0)**2
-        z0 = numpy.max(r[:,3]) # cone height above the z=0 plane
-        h = z0 + numpy.abs(numpy.min(r[:,3])) # cone total height
-        base_r = (numpy.max(  (numpy.max(r[:,2]),numpy.max(r[:,1]))   ) + numpy.abs(numpy.min(  ( numpy.min(r[:,2]),numpy.min(r[:,1]) )  )))/2.0 # cone base radius
+        z0 = numpy.max(r[:,2]) # cone height above the z=0 plane
+        h = z0 + numpy.abs(numpy.min(r[:,2])) # cone total height
+        base_r = (numpy.max(  (numpy.max(r[:,1]),numpy.max(r[:,0]))   ) + numpy.abs(numpy.min(  ( numpy.min(r[:,1]),numpy.min(r[:,0]) )  )))/2.0 # cone base radius
         c = base_r / h # cone opening radius (defined by wolfram https://mathworld.wolfram.com/Cone.html )
-        z_cone = lambda x,y,z0,c,s: z0+s*numpy.sqrt((x**2+y**2)/(c**2)) # s is the concavity of the cone: -1 turned down, +1 turned up
-        pass
+        #z_cone = lambda x,y,z0,c,s: z0+s*numpy.sqrt((x**2+y**2)/(c**2)) # s is the concavity of the cone: -1 turned down, +1 turned up
+        cone_r_sqr = lambda z,z0,c: (c*(z-z0))**2
+        outside_cone = (r[:,0]**2+r[:,1]**2) > cone_r_sqr(r[:,2],z0,c)
+        pixel_list = numpy.nonzero(outside_cone)[0]
+        r_out = r[outside_cone,:]
+
+        neigh = [ numpy.array([],dtype=int) for i in range(r.shape[0]) ]
+        for i,r0 in enumerate(r_out):
+            # a radius is not given, hence returns a crystalline-like cubic-like structure :P
+            pixel_list_sorted = numpy.argsort(numpy.linalg.norm(r_out-r0,axis=1)) # sorted by Euler distance to r0
+            rs = r_out[pixel_list_sorted,:] # list of positions from the closest to the farthest one to r0
+            local_neigh_list = [] # local neighbor list
+            x1_neigh = get_first_val_not_in_list(numpy.nonzero( is_left_neigh(rs[:,:2],r0[:2]) )[0],local_neigh_list) # gets first neighbor to the left that is not added yet
+            if x1_neigh:
+                local_neigh_list.append(x1_neigh)
+            x2_neigh = get_first_val_not_in_list(numpy.nonzero( numpy.logical_not(is_left_neigh(rs[:,:2],r0[:2])) )[0],local_neigh_list) # gets first neighbor to the right that is not added yet
+            if x2_neigh:
+                local_neigh_list.append(x2_neigh)
+            z1_neigh = get_first_val_not_in_list(numpy.nonzero(rs[:,2]<r0[2])[0],local_neigh_list) # gets first neighbor to the top that is not added yet
+            if z1_neigh:
+                local_neigh_list.append(z1_neigh)
+            z2_neigh = get_first_val_not_in_list(numpy.nonzero(rs[:,2]>r0[2])[0],local_neigh_list) # gets first neighbor to the bottom that is not added yet
+            if z2_neigh:
+                local_neigh_list.append(z2_neigh)
+            neigh[pixel_list[i]] = pixel_list[pixel_list_sorted[local_neigh_list]] # adds neighbors
+        return neigh
+            
     neigh = []
     for r0 in r:
         if (R>0.0): # a neighborhood radius is given
@@ -271,6 +303,21 @@ def generate_list_of_neighbors(r,R=0.0,on_conic_surface_only=False):
                 local_neigh_list.append(z2_neigh)
             neigh.append(pixel_list_sorted[local_neigh_list]) # adds neighbors
     return neigh
+
+def is_left_neigh(u,v):
+    # u and v are two vectors on the x,y plane
+    # u may be a list of vectors (one vector per row)
+    return numpy.dot(u,[-v[1],v[0]])>0.0 # # the vector [-v[1],v[0]] is the 90-deg CCW rotated version of v
+
+def myatan(x,y):
+    return numpy.pi*(1.0-0.5*(1+numpy.sign(x))*(1-numpy.sign(y**2))-0.25*(2+numpy.sign(x))*numpy.sign(y))-numpy.sign(x*y)*numpy.arctan((numpy.abs(x)-numpy.abs(y))/(numpy.abs(x)+numpy.abs(y)))
+
+def myacos(x):
+    x[numpy.abs(x) > 1.0] = numpy.round(x[numpy.abs(x) > 1.0])
+    return numpy.arccos(x)
+
+def angle_uv(u,v,axis=None):
+        return myacos(numpy.dot(u,v)/(numpy.linalg.norm(u,axis=axis)*numpy.linalg.norm(v)))
 
 def get_color_matrix():
     return numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
