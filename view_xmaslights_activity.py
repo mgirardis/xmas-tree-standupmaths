@@ -56,12 +56,10 @@ def main():
         # setting synapse parameters
         #parSynapse = [0.01,0.0,1.0/2.0,1.0/2.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
         parSynapse = [-0.2,0.05,1.0/5.0,1.0/5.0] # par[0] -> J, par[1] -> noise amplitude, par[2] -> 1/tau_f, par[3] -> 1/tau_g
-        conic_surface_only = False
         #R_connection = mean_distance(r_LEDs)/6.0
         conic_surface_only = True
     else:
         raise ValueError('unknown setting')
-    
 
     global V,S
     P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
