@@ -35,7 +35,7 @@ def main():
 
     if sim_setting == 'spiral':
         # setting external stimulus parameters
-        r_Poisson = 0.01 # rate of Poisson process
+        r_Poisson = 0.2 # rate of Poisson process
         # setting neuron parameters
         parNeuron_tanh = [ 0.6, 1.0/0.35, 0.001, 0.008, -0.7, 0.1 ] # par[0] -> K, par[1] -> 1/T, par[2] -> d, par[3] -> l, par[4] -> xR, par[5] -> Iext
         neuron_map_iter = neuron_map_tanh
@@ -68,10 +68,10 @@ def main():
     V,S,input_list,presyn_neuron_list = build_network(r_LEDs,R=R_connection,conic_surface_only=conic_surface_only)
     V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh,V0)
 
-    fh = plt.figure(1)
+    fh = plt.figure(figsize=(10,10))
     ax = fh.add_subplot(111,projection='3d')
     ax = fix_aspect(ax,r_LEDs)
-    splot = ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],c=memb_potential_to_01(V),vmin=0,vmax=1,cmap=color_map)
+    splot = ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],c=memb_potential_to_01(V),vmin=0,vmax=1,cmap=color_map,s=50,edgecolors=[0,0,0])
     ani = animation.FuncAnimation(fh, animate, fargs=(splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True, repeat=True, save_count=save_video)
     plt.show()
     if save_video > 0:
@@ -350,6 +350,31 @@ def fix_aspect(ax,r):
     ax.set_ylim(mid_y - max_range, mid_y + max_range)
     ax.set_zlim(mid_z - max_range, mid_z + max_range)
     return ax
+
+def plot_network_3d(r,edge_list,node_args=None,edge_args=None,ax=None):
+# r -> 3d position vector list: r[0] -> position of node 0, etc
+# edge_list -> list of edges: [ (0,1), (0,4) ], means that node 0 is connected to node 1 and node 4, etc
+# node_args -> args dict passed on to the node plotting function (matplotlib scatter)
+# edge_args -> args dict passed on to the edge plotting function (matplotlib plot)
+    if not ax:
+        fh = plt.figure()
+        ax = fh.add_subplot(111,projection='3d')
+    ax = fix_aspect(ax,r)
+    if not node_args:
+        node_args = {}
+    if not edge_args:
+        edge_args = {}
+    if 'c' not in edge_args.keys():
+        edge_args['c'] = 'k'
+    if 'alpha' not in edge_args.keys():
+        edge_args['alpha'] = 0.5
+    ax.scatter(r[:,0],r[:,1],r[:,2],**node_args)
+    for e in edge_list:
+        n1 = e[0]
+        n2 = e[1]
+        ax.plot([ r[n1,0],r[n2,0] ],[ r[n1,1],r[n2,1] ],[ r[n1,2],r[n2,2] ],**edge_args)
+    return ax
+
 
 #def animate(t,ax,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
 def animate(t,splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
