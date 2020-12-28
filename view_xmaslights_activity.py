@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 #print(plt.rcParams['animation.ffmpeg_path']) # if it does not recognize the ffmpeg, force it to look in the right place
 #plt.rcParams['animation.ffmpeg_path'] = 'D:\\Dropbox\\p\\programas\\bin\\ffmpeg\\bin\\ffmpeg.exe'
 import matplotlib.animation as animation
-from numpy.core.fromnumeric import mean
 
 def main():
 
@@ -64,11 +63,12 @@ def main():
     global V,S
     P_Poisson = 1.0-numpy.exp(-r_Poisson) # probability of firing is constant
     V,S,input_list,presyn_neuron_list = build_network(r_LEDs,R=R_connection,conic_surface_only=conic_surface_only)
-    V = set_initial_condition(V,neuron_map_iter,parNeuron_tanh,V0)
+    V = set_initial_condition(V,neuron_map_iter,parNeuron,V0)
 
-    fh = plt.figure(figsize=(10,10))
-    ax = fh.add_subplot(111,projection='3d')
+    fh = plt.figure(figsize=(10,10),facecolor='k')
+    ax = fh.add_subplot(111,projection='3d',facecolor='k')
     ax = fix_aspect(ax,r_LEDs)
+    ax = set_3daxis_color(ax,(0.0,0.0,0.0,1.0),grid_c=(0.2,0.2,0.2,1.0))
     splot = ax.scatter(r_LEDs[:,0],r_LEDs[:,1],r_LEDs[:,2],c=memb_potential_to_01(V),vmin=0,vmax=1,cmap=color_map,s=50,edgecolors=[0,0,0])
     ani = animation.FuncAnimation(fh, animate, fargs=(splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSynapse,P_Poisson), interval=int(anim_dt*1000), blit=True, repeat=True, save_count=save_video)
     plt.show()
@@ -373,6 +373,15 @@ def plot_network_3d(r,edge_list,node_args=None,edge_args=None,ax=None):
         ax.plot([ r[n1,0],r[n2,0] ],[ r[n1,1],r[n2,1] ],[ r[n1,2],r[n2,2] ],**edge_args)
     return ax
 
+def set_3daxis_color(ax,c,grid_c=None):
+    ax.w_xaxis.pane.set_color(c)
+    ax.w_yaxis.pane.set_color(c)
+    ax.w_zaxis.pane.set_color(c)
+    if grid_c:
+        ax.w_xaxis._axinfo['grid']['color'] = grid_c
+        ax.w_yaxis._axinfo['grid']['color'] = grid_c
+        ax.w_zaxis._axinfo['grid']['color'] = grid_c
+    return ax
 
 #def animate(t,ax,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
 def animate(t,splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
