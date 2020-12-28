@@ -1,6 +1,6 @@
 import numpy
 import networkx
-import xmaslights_network as xmt
+import view_xmaslights_activity as xmt
 
 r_LEDs = numpy.asarray(xmt.load_coords(),dtype=float)
 
