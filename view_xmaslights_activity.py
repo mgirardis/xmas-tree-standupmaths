@@ -392,7 +392,7 @@ def animate(t,splot,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parS
     return splot,
 
 
-def load_coords(coordfilename = "xmastree2020/coords.txt"):
+def load_coords(coordfilename = "coords.txt"):
     fin = open(coordfilename,'r')
     coords_raw = fin.readlines()
     coords_bits = [i.split(",") for i in coords_raw]
