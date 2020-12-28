@@ -407,7 +407,7 @@ def xmaslight():
 
         # use the show() option as rarely as possible as it takes ages
         # do not use show() each time you change a LED but rather wait until you have changed them all
-        #pixels.show()
+        pixels.show()
 
         # FOR DEBUGGING PURPOSE
         #frames.append(numpy.array(pixels).reshape( (20,25,3) ))
