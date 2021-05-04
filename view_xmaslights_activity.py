@@ -315,7 +315,7 @@ def myacos(x):
     return numpy.arccos(x)
 
 def angle_uv(u,v,axis=None):
-        return myacos(numpy.dot(u,v)/(numpy.linalg.norm(u,axis=axis)*numpy.linalg.norm(v)))
+    return myacos(numpy.dot(u,v)/(numpy.linalg.norm(u,axis=axis)*numpy.linalg.norm(v)))
 
 def get_color_matrix():
     return numpy.asarray([[0.267004, 0.004874, 0.329415, 1.      ],
