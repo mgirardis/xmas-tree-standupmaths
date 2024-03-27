@@ -16,13 +16,17 @@ The actual simulation of what the xmas tree will look like, visualized in a matp
 
 Running this file like
 
-- python view_xmaslights_activity.py -set spiral
+```
+python view_xmaslights_activity.py -set spiral
+```
 
 generates the collective flashing pattern that displays spiral waves (although it's not easy to spot them).
 
 <a href="output_xmastree_activity/xmas_tree_spiral.mp4">Video example.</a>
 
-- python view_xmaslights_activity.py -set sync
+```
+python view_xmaslights_activity.py -set sync
+```
 
 generates synchronized bursts of activity intertwined with random firing of LEDs.
 

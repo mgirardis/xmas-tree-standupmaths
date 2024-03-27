@@ -16,7 +16,7 @@ def main():
     parser.add_argument('-save', nargs=1, required=False, metavar='NUM_OF_FRAMES', type=int, default=[0], help='if 0, doesnt save video; otherwise saves the amount of frames given by this parameter')
     parser.add_argument('-dt', nargs=1, required=False, metavar='SECONDS', type=float, default=[0.04], help='(seconds) animation interval')
     parser.add_argument('-R', nargs=1, required=False, metavar='RADIUS', type=float, default=[0.0], help='if > 0, connects every led within R distant from one another; otherwise generates a cubic-like lattice')
-    parser.add_argument('-cmap', nargs=1, required=False, metavar='NAME', type=str, default=['viridis'], help='name of the colormap to use -- only the predefined by matplotlib are accepted')
+    parser.add_argument('-cmap', nargs=1, required=False, metavar='NAME', type=str, default=['plasma'], help='name of the colormap to use -- only the predefined by matplotlib are accepted')
     parser.add_argument('-set', nargs=1, required=False, metavar='CHOICE',type=str,default=['spiral'], choices=['spiral', 'sync'], help='spiral: generates spiral waves; sync: generates synchronized flashes')
     args = parser.parse_args()
 
@@ -374,13 +374,13 @@ def plot_network_3d(r,edge_list,node_args=None,edge_args=None,ax=None):
     return ax
 
 def set_3daxis_color(ax,c,grid_c=None):
-    ax.w_xaxis.pane.set_color(c)
-    ax.w_yaxis.pane.set_color(c)
-    ax.w_zaxis.pane.set_color(c)
+    ax.xaxis.pane.set_color(c)
+    ax.yaxis.pane.set_color(c)
+    ax.zaxis.pane.set_color(c)
     if grid_c:
-        ax.w_xaxis._axinfo['grid']['color'] = grid_c
-        ax.w_yaxis._axinfo['grid']['color'] = grid_c
-        ax.w_zaxis._axinfo['grid']['color'] = grid_c
+        ax.xaxis._axinfo['grid']['color'] = grid_c
+        ax.yaxis._axinfo['grid']['color'] = grid_c
+        ax.zaxis._axinfo['grid']['color'] = grid_c
     return ax
 
 #def animate(t,ax,L,neuron_map_iter,parNeuron,input_list,presyn_neuron_list,parSyn,P_poisson):
